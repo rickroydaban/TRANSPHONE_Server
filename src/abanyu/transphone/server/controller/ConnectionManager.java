@@ -25,7 +25,7 @@ public class ConnectionManager implements Runnable{
 			mappingData.setServerSocket(server);	  
 			InetAddress ip=InetAddress.getLocalHost();
 			mappingData.getConnectionData().setServerIp(ip.getHostAddress());
-			String url = "http://testphone.freetzi.com/thesis/dbmanager.php?fname=setServerIP&arg1="+ip.getHostAddress();
+			String url = mappingData.getConnectionData().getDBUrl()+"/thesis/dbmanager.php?fname=setServerIP&arg1="+ip.getHostAddress();
 			new URL(url).openStream();
 	
 			mappingView.getStatusField().setText("ONLINE. LISTENING FOR REQUESTS... ");

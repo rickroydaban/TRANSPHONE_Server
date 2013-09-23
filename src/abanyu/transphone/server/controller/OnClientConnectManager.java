@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import javax.swing.SwingUtilities;
+
 import abanyu.transphone.server.model.MappingData;
 import abanyu.transphone.server.view.MapPanel;
 import actors.MyPassenger;
@@ -23,6 +25,9 @@ class OnClientConnectManager implements Runnable {
     private ObjectInputStream clientInputStream;
     List<String> myTaxiList;
     
+    Socket passengerSocket, taxiSocket;
+    ObjectOutputStream passengerOutputStream, taxiOutputStream;
+		private Object inputObject;
     public OnClientConnectManager(Socket pClientSocket, MappingData pMappingData, MapPanel pMappingView, MappingController pMappingController) {
       clientSocket = pClientSocket;
       mappingData = pMappingData;
@@ -37,119 +42,137 @@ class OnClientConnectManager implements Runnable {
     	  clientInputStream = new ObjectInputStream(clientSocket.getInputStream());
     	  clientOutputStream = new ObjectOutputStream(clientSocket.getOutputStream());
        
-        Object inputObject = clientInputStream.readObject();//thread stops here until a new connection arrives
+        inputObject = clientInputStream.readObject();//thread stops here until a new connection arrives
 
         if(inputObject instanceof MyPassenger){
-        	System.out.println("a passenger has connected to the system!");
           //links to the object data sent by the client connection
           MyPassenger myPassenger = (MyPassenger) inputObject;
-          boolean keyFound = mappingData.getPassengerList().containsKey(myPassenger.getIp());
-          
+          MyTaxi nearestTaxi = mappingData.getTaxiList().get(myPassenger.getRequestedTaxi());
+
           //passenger life cycle connects to the server twice. First, when requesting a taxi and lastly, when disconnecting to the server
-          if(keyFound){//disconnects the passenger to the server
-          	mappingData.getPassengerList().remove(myPassenger.getIp()); 
-          	int clientCount = Integer.parseInt(mappingView.getClientCountField().getText());
-          	mappingView.getClientCountField().setText(String.valueOf(--clientCount));
-          }else{//manage passenger request
-            int clientCount = Integer.parseInt(mappingView.getClientCountField().getText());
-            mappingView.getClientCountField().setText(String.valueOf(++clientCount)); //update the UI
-            mappingData.getPassengerList().put(myPassenger.getIp(), myPassenger); //register the passenger to the system
-            notifyClients(findShortestTaxiDistance(myPassenger),myPassenger);
-          }
-        }else{
-        	System.out.println("a taxi has connected to the system!");
+        	System.out.println("A Passenger connected to the system requesting: "+myPassenger.getRequestedTaxi());          	
+          //since we had bruteforcely set the requested taxi's status in the web to avoid other passengers from 
+          //referring to it, we have to vacate the status of that taxi if ever the taxi status here is also vacant
+          if(nearestTaxi.getStatus() == TaxiStatus.vacant)//we cant force to vacate the taxi if it is not vacant here
+          	nearestTaxi.setStatus(TaxiStatus.vacant);
+
+          System.out.println("Taxi Status: "+nearestTaxi.getStatus());
+      		if(nearestTaxi.getStatus()==TaxiStatus.vacant){ //if there is a pending passenger request, then the server must skip on searching for this unit
+            System.out.println("Sending Taxi object to passenger with passenger ip: "+myPassenger.getIp()+" @ port: "+mappingData.getConnectionData().getPassengerPort());
+            mappingData.addPassenger((MyPassenger)inputObject);
+            System.out.println("Found nearest vacant taxi with Plate No: "+myPassenger.getRequestedTaxi());
+
+            notifyClients(nearestTaxi,myPassenger, "send");
+      		}else{
+      			if(mappingData.getTaxiList().containsKey(nearestTaxi.getPlateNumber())){
+      				System.out.println("The requested taxi seems to be vacant in the db but is not vacant in the server");
+      			}else{
+      				System.out.println("Error. The requested taxi is not listed in the server anymore");
+      			}
+    				notifyClients(nearestTaxi,myPassenger, "cancelRequest");
+      		}          
+        }else if(inputObject instanceof MyTaxi){
           //links to the object data sent by the client(taxi) connection
-          MyTaxi currTaxiData = (MyTaxi) inputObject;
-          boolean keyFound = mappingData.getTaxiList().containsKey(currTaxiData.getPlateNumber());
+          MyTaxi newTaxiInfos = (MyTaxi) inputObject;
+        	MyPassenger myPassenger = null;
+        	boolean keyFound = mappingData.getTaxiList().containsKey(newTaxiInfos.getPlateNumber());
           
           if(keyFound){ //checks if the current unit's plate no is already registered to the system
-            MyTaxi prevTaxiData = mappingData.getTaxiList().get(currTaxiData.getPlateNumber()); //get the previous data of this taxi
+            MyTaxi oldTaxiInfos = mappingData.getTaxiList().get(newTaxiInfos.getPlateNumber()); //get the previous data of this taxi
+          	System.out.println("updating taxi "+newTaxiInfos.getPlateNumber()+" to the system! with status:"+newTaxiInfos.getStatus()+" "+newTaxiInfos.getIP()+":"+mappingData.getConnectionData().getTaxiPort());
+          	
+          	if(mappingData.getPassengerList().size()>0)
+          		myPassenger = mappingData.getPassengerList().get(newTaxiInfos.getPassengerIP());
 
-            if(currTaxiData.getStatus()!=TaxiStatus.disconnected){ //is only true when the unit is already in the base
+            if(newTaxiInfos.getStatus()!=TaxiStatus.disconnected){ //is only true when the unit is already in the base
               //updates the distance travelledd of the current taxi
-            	if(prevTaxiData.getCurLat() != 0 && prevTaxiData.getCurLng() != 0){ //check if the received taxi data has location
-              	double curDistance = distance(prevTaxiData.getCurLat(), prevTaxiData.getCurLng(), currTaxiData.getCurLat(), currTaxiData.getCurLng());
-              	currTaxiData.setDistanceTraveled(prevTaxiData.getDistanceTraveled() + curDistance);
+            	if(oldTaxiInfos.getCurLat() != 0 && oldTaxiInfos.getCurLng() != 0){ //check if the received taxi data has location
+              	double curDistance = distance(oldTaxiInfos.getCurLat(), oldTaxiInfos.getCurLng(), newTaxiInfos.getCurLat(), newTaxiInfos.getCurLng());
+              	newTaxiInfos.setDistanceTraveled(oldTaxiInfos.getDistanceTraveled() + curDistance);
               }
           		
-          		if(currTaxiData.getStatus()==TaxiStatus.unavailable){ //if there is a pending passenger request, then the server must skip on searching for this unit
+          		if(newTaxiInfos.getStatus()==TaxiStatus.unavailable){ //if there is a pending passenger request, then the server must skip on searching for this unit
               	//handles system whenever something happens on the taxi while performing the passenger request              
-                if(prevTaxiData.getStatus()==TaxiStatus.requested || prevTaxiData.getStatus()==TaxiStatus.occupied){
-                  MyPassenger myPassenger = mappingData.getPassengerList().get(prevTaxiData.getPassengerIP());
-                  //contacts another unit to fetched the passenger
+                if(oldTaxiInfos.getStatus()==TaxiStatus.requested || oldTaxiInfos.getStatus()==TaxiStatus.occupied){
                   if(myPassenger != null){	
-                    notifyClients(findShortestTaxiDistance(myPassenger),myPassenger);
+                    notifyClients(newTaxiInfos,myPassenger,"cancelRequest");
+                  }else{
+                  	System.out.println("No Passenger is registered in the passenger list with such IP");
                   }
                 }
           		}
+          		
+          		if(newTaxiInfos.getStatus()==TaxiStatus.occupied){
+          			notifyClients(newTaxiInfos, myPassenger, "send");
+          		}
+          		
+              System.out.print("Updating old taxi data with status: "+oldTaxiInfos.getStatus()+" to ");
+              mappingData.getTaxiList().put(newTaxiInfos.getPlateNumber(), newTaxiInfos);
+              System.out.println(newTaxiInfos.getStatus());
           	}else{
-          		//prompt the server to handle disconnection request from the unit
+          		//do something on taxi disconnect
+        	  	try {
+        				System.out.println("Request Taxi Disconnect!");
+        				//CANNOT DETERMINE OBJECT INSTANCE SINCE ON INPUT INSTANCE IS NULL LINE 38 ------------------------FIX ME PLEASE!!!
+                if(myPassenger != null){	
+                  notifyClients(newTaxiInfos,myPassenger,"cancelRequest");
+                }
+                
+                mappingData.getTaxiList().remove(newTaxiInfos.getPlateNumber());
+        				Socket socket = new Socket(clientSocket.getInetAddress(), mappingData.getConnectionData().getTaxiPort());
+        				clientOutputStream = new ObjectOutputStream(socket.getOutputStream());
+        				clientOutputStream.writeObject("disconnect");
+        				clientOutputStream.flush();
+        				
+        		    SwingUtilities.invokeLater(new Runnable() {
+        		      public void run() {
+        		      	mappingView.getWebBrowser().navigate("http://localhost/thesis/multiplemarkers.php"); //refresh web browser			
+        		      }
+        		    });
+        		    
+        				socket.close();
+        			  } catch (IOException e1) {
+        			  	System.out.println("io exception: "+e1.getMessage()+" tps: "+mappingData.getConnectionData().getTaxiPort()+" tpu: "+mappingData.getTaxi().getIP());
+        			  }
           	}
           }else{
-          	mappingData.getTaxiList().put(currTaxiData.getPlateNumber(), currTaxiData);
+          	System.out.println("registering new taxi "+newTaxiInfos.getPlateNumber()+" to the system! with status:"+newTaxiInfos.getStatus());
+            mappingData.addTaxi((MyTaxi)newTaxiInfos);
           }
-        }
-          /*****************************************************************************************************
-           *************************************** OLD FILE *************************************************** 
-           ****************************************************************************************************/
-//          //the whole if code block is usually used for initial connection of the unit to the server
-//          if(currTaxiData.getStatus() != TaxiStatus.unavailable && currTaxiData.getStatus() != TaxiStatus.disconnected){
-//            if(keyFound){ //check if the connected taxi is already registered in the list
-//              MyTaxi curTaxi = mappingData.getTaxiList().get(currTaxiData.getPlateNumber());
-//            	//records the di
-//              if(curTaxi.getCurLat() != 0 && curTaxi.getCurLng() != 0){ //check if the received taxi data has location
-//              	double curDistance = distance(curTaxi.getCurLat(), curTaxi.getCurLng(), currTaxiData.getCurLat(), currTaxiData.getCurLng());
-//              	currTaxiData.setDistanceTraveled(curTaxi.getDistanceTraveled() + curDistance);
-//              }
-//            }else //register the unit if ever it has not been registered yet
-//            	mappingData.getTaxiList().put(currTaxiData.getPlateNumber(), currTaxiData);
-//            
-//            //update the taxi coordinates in the view
-//            mappingData.getTaxi().setCurrentLocation(currTaxiData.getCurLat(), currTaxiData.getCurLng());
-//                      	  
-//          	//automatically updates myTaxi object pair using its plate number
-//           	//if the plate number does not exist in the list, it will be automatically inserted
-//          	mappingData.getTaxiList().put(currTaxiData.getPlateNumber(), currTaxiData);          	
-//          }else{
-//            if(keyFound) {
-//              MyTaxi curTaxi = mappingData.getTaxiList().get(currTaxiData.getPlateNumber());
-//            	//handles system whenever something happens on the taxi while doing the request              
-//              if(curTaxi.getStatus()==TaxiStatus.requested || curTaxi.getStatus()==TaxiStatus.occupied){
-//                MyPassenger curPassenger = mappingData.getPassengerList().get(curTaxi.getPassengerIP());
-//                
-//                if(curPassenger != null){	
-//                  MyTaxi nearestTaxi = findShortestTaxiDistance(curPassenger);
-//                }
-//              }
-//            	
-//              if(currTaxiData.getStatus() == TaxiStatus.disconnected)	//edited
-//              {
-//              	mappingData.getTaxiList().remove(curTaxi.getPlateNumber());
-//              	int taxiCount = Integer.parseInt(mappingView.getTaxiCounterField().getText());
-//              	mappingView.getTaxiCounterField().setText(String.valueOf(--taxiCount));
-//              }
-//            }
-//          }          
-//        }
-//        
-        Set<String> keys = mappingData.getTaxiList().keySet(); //get all the keys of the taxi record
-        
-        myTaxiList = new ArrayList<String>();
-        for(String curKey:keys){
-    			 MyTaxi curTaxi = mappingData.getTaxiList().get(curKey);
-          myTaxiList.add(curTaxi.getPlateNumber()+";"+curTaxi.getStatus()+";"+curTaxi.getCurLat()+";"+curTaxi.getCurLng());
-         }
-         
-        mappingView.getTaxiCounterField().setText(String.valueOf(myTaxiList.size()));
-        mappingController.setWebMarkers(myTaxiList.toArray(new String[myTaxiList.size()]));     
+          
+          Set<String> keys = mappingData.getTaxiList().keySet(); //get all the keys of the taxi record
+          
+          myTaxiList = new ArrayList<String>();
+          for(String curKey:keys){
+      			 MyTaxi curTaxi = mappingData.getTaxiList().get(curKey);
+      			 myTaxiList.add(curTaxi.getPlateNumber()+";"+curTaxi.getStatus()+";"+curTaxi.getCurLat()+";"+curTaxi.getCurLng());
+           }
+           
+          mappingView.getTaxiCounterField().setText(String.valueOf(myTaxiList.size()));
+          mappingView.getClientCountField().setText(String.valueOf(mappingData.getPassengerList().size()));
+          mappingController.setWebMarkers(myTaxiList.toArray(new String[myTaxiList.size()]));     
+        }else{
+        	if(inputObject instanceof String){
+        		System.out.println("Passenger "+ mappingData.getPassengerList().get(inputObject).getPassengerName()+" is requesting to disconnect");        		
+        		
+    				Socket socket = new Socket((String)inputObject, mappingData.getConnectionData().getPassengerPort());
+    				clientOutputStream = new ObjectOutputStream(socket.getOutputStream());
+    				clientOutputStream.writeObject("disconnect");
+    				clientOutputStream.flush();
+        		
+        		mappingData.getPassengerList().remove(inputObject);
+        	}        	
+        }        
 	  } catch (IOException e) {	  	
 	  	try {
 				System.out.println("Request Client Resend!");
 				//CANNOT DETERMINE OBJECT INSTANCE SINCE ON INPUT INSTANCE IS NULL LINE 38 ------------------------FIX ME PLEASE!!!
-
+				if(inputObject == null){
+					System.out.println("Cannot Determine Where to send the resend message... Please Fix me.");
+				}
 				Socket socket = new Socket(clientSocket.getInetAddress(), mappingData.getConnectionData().getTaxiPort());
 				clientOutputStream = new ObjectOutputStream(socket.getOutputStream());
-				clientOutputStream.writeObject("Resend");
+				clientOutputStream.writeObject("resend");
 				clientOutputStream.flush();
 				socket.close();
 			  } catch (IOException e1) {
@@ -160,66 +183,86 @@ class OnClientConnectManager implements Runnable {
 	  }
 	}
         
-  private boolean notifyClients(MyTaxi nearestTaxi, MyPassenger passenger){
-    if(nearestTaxi == null || passenger == null)
+  private boolean notifyClients(MyTaxi nearestTaxi, MyPassenger passenger, String action){
+    if(nearestTaxi == null || passenger == null){
+    	if(nearestTaxi==null)
+    		System.out.println("cannot find any nearest taxi");
+    	else
+    		System.out.println("passenger is null");
     	return false;
-    else{
-      try{
-      	//updates the status of the assigned taxi
-      	nearestTaxi.setStatus(TaxiStatus.requested);
-      	//Send new taxi data to current passenger of disconnected taxi
-      	Socket passengerSocket = new Socket(passenger.getIp(), mappingData.getConnectionData().getPassengerPort());
-      	ObjectOutputStream passengerOutputStream = new ObjectOutputStream(passengerSocket.getOutputStream());
-      	passengerOutputStream.writeObject(nearestTaxi);
-      	passengerOutputStream.flush();
-      	passengerOutputStream.close();
-      	passengerSocket.close();
-      	//Send passenger data to taxi if there is one available
-      	Socket taxiSocket = new Socket(nearestTaxi.getIP(), mappingData.getConnectionData().getTaxiPort());
-      	ObjectOutputStream taxiOutputStream = new ObjectOutputStream(taxiSocket.getOutputStream());
-      	taxiOutputStream.writeObject(passenger);
-      	taxiOutputStream.flush();
-      	taxiOutputStream.close();
-      	taxiSocket.close();
-      	return true;
-      }catch(Exception e){
-      	return false;
-      }
+    }else{
+	    try{
+		    System.out.println("received status of the requested taxi: "+nearestTaxi.getStatus());
+		    //updates the status of the assigned taxi
+		    System.out.println("connect to passenger socket: "+passenger.getIp()+" at port: "+mappingData.getConnectionData().getPassengerPort());
+	    	passengerSocket = new Socket(passenger.getIp(), mappingData.getConnectionData().getPassengerPort());
+	    	passengerOutputStream = new ObjectOutputStream(passengerSocket.getOutputStream());
+	    	if(nearestTaxi.getStatus()!=TaxiStatus.unavailable || nearestTaxi.getStatus()!=TaxiStatus.disconnected){
+	    		if(nearestTaxi.getStatus()==TaxiStatus.vacant)
+	    			nearestTaxi.setStatus(TaxiStatus.requested);
+		    
+		    	System.out.println("trying to connect to taxi sockety with IP: "+ nearestTaxi.getIP()+" in port: "+mappingData.getConnectionData().getTaxiPort());
+		    	taxiSocket = new Socket(nearestTaxi.getIP(), mappingData.getConnectionData().getTaxiPort());
+		    	taxiOutputStream = new ObjectOutputStream(taxiSocket.getOutputStream());
+		    	System.out.println("connected to taxi");
+		    	taxiOutputStream.writeObject(passenger);
+		    	taxiOutputStream.flush();
+		    	System.out.println("closing the taxi socket");
+		    	taxiOutputStream.close();
+		    	taxiSocket.close();
+		    	
+	    		passengerOutputStream.writeObject(nearestTaxi);
+		    }else{
+		    	System.out.println("action: "+action);
+	    		passengerOutputStream.writeObject(action);
+		    }
+
+		    System.out.println("updated status of the requested taxi: "+nearestTaxi.getStatus());
+	    	passengerOutputStream.flush();
+	    	System.out.println("closing the passenger socket");
+	    	passengerOutputStream.close();
+	    	passengerSocket.close();
+	    	//Send passenger data to taxi if there is one available
+		    return true;
+	  }catch(Exception e){
+	  	System.out.println("exception on notifyclients function: "+e.getMessage());
+	  	return false;
+	  }
     }
   }
     
-  private MyTaxi findShortestTaxiDistance(MyPassenger pMyPassenger) {
-  	//Find the nearest taxi and send its information to the passenger
-  	double shortestDistance = 0, //the shortest distance record within the loop
-        	 curDistance = 0;      //the distance estimated by comparing the current taxi's location to the client's source location
-        
-  	MyTaxi nearestTaxi = null; //the data of the resulting nearest taxi estimation
-    Set<String> keys = mappingData.getTaxiList().keySet(); //get all the keys of the taxi record
-        
-    //loop to find the nearest taxi
-    for(String curKey:keys){
-    	MyTaxi curTaxi = mappingData.getTaxiList().get(curKey);
-    	
-    	if(curTaxi.getStatus() == TaxiStatus.vacant){
-    		if(shortestDistance==0){
-    			shortestDistance= distance( pMyPassenger.getCurLat(),pMyPassenger.getCurLng(), //calculate the distance of the passenger to the current taxi's location
-            						    					curTaxi.getCurLat(),curTaxi.getCurLng());  
-    		}else{
-    			curDistance = distance( pMyPassenger.getCurLat(),pMyPassenger.getCurLng(),
-    															curTaxi.getCurLat(),curTaxi.getCurLng());
-    		}
-          
-    		if(curDistance==0 || curDistance<shortestDistance){
-    			nearestTaxi=curTaxi;  
-
-    			if(curDistance!=0)
-    				shortestDistance=curDistance; //the current distance is the shortest distance
-    		}
-    	} 
-    }
-
-    return nearestTaxi;
-  }
+//  private MyTaxi findShortestTaxiDistance(MyPassenger pMyPassenger) {
+//  	//Find the nearest taxi and send its information to the passenger
+//  	double shortestDistance = 0, //the shortest distance record within the loop
+//        	 curDistance = 0;      //the distance estimated by comparing the current taxi's location to the client's source location
+//        
+//  	MyTaxi nearestTaxi = null; //the data of the resulting nearest taxi estimation
+//    Set<String> keys = mappingData.getTaxiList().keySet(); //get all the keys of the taxi record
+//        
+//    //loop to find the nearest taxi
+//    for(String curKey:keys){
+//    	MyTaxi curTaxi = mappingData.getTaxiList().get(curKey);
+//    	
+//    	if(curTaxi.getStatus() == TaxiStatus.vacant){
+//    		if(shortestDistance==0){
+//    			shortestDistance= distance( pMyPassenger.getCurLat(),pMyPassenger.getCurLng(), //calculate the distance of the passenger to the current taxi's location
+//            						    					curTaxi.getCurLat(),curTaxi.getCurLng());  
+//    		}else{
+//    			curDistance = distance( pMyPassenger.getCurLat(),pMyPassenger.getCurLng(),
+//    															curTaxi.getCurLat(),curTaxi.getCurLng());
+//    		}
+//          
+//    		if(curDistance==0 || curDistance<shortestDistance){
+//    			nearestTaxi=curTaxi;  
+//
+//    			if(curDistance!=0)
+//    				shortestDistance=curDistance; //the current distance is the shortest distance
+//    		}
+//    	} 
+//    }
+//
+//    return nearestTaxi;
+//  }
     
   private double distance(double lat1, double lon1, double lat2, double lon2) {
 	double theta = lon1 - lon2;

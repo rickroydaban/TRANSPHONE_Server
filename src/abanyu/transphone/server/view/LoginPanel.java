@@ -20,14 +20,15 @@ public class LoginPanel{
 	private JPanel mainPanel, messagePanel;
 	
 	public LoginPanel(){
-  	mainPanel = new JPanel(new GridBagLayout());  	
-    mainPanel.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));    
-    mainPanel.setBackground(Color.white);
-  		
-    /**/JPanel loginPanel = new JPanel();
-				loginPanel.setLayout(new BoxLayout(loginPanel, BoxLayout.Y_AXIS));
-				loginPanel.setBorder(BorderFactory.createCompoundBorder( BorderFactory.createLineBorder(Color.decode("#ABABAB")), 
-																														 		 BorderFactory.createEmptyBorder(20,20,20,20)));
+		mainPanel = new JPanel(new GridBagLayout());
+		mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+		mainPanel.setBackground(Color.white);
+
+		/**/JPanel loginPanel = new JPanel();
+		loginPanel.setLayout(new BoxLayout(loginPanel, BoxLayout.Y_AXIS));
+		loginPanel.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createLineBorder(Color.decode("#ABABAB")),
+				BorderFactory.createEmptyBorder(20, 20, 20, 20)));
 
     /**//**/JPanel companyPanel = new JPanel();
   	/**//**//**/JLabel companyLabel = new JLabel("Company");

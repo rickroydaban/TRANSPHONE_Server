@@ -65,4 +65,11 @@ public class MappingData {
 		isServerAlive = false;
 	}
 	
+	public void addTaxi(MyTaxi pTaxi){
+		taxiList.put(pTaxi.getPlateNumber(), pTaxi);
+	}
+	
+	public void addPassenger(MyPassenger pPassenger){
+		passengerList.put(pPassenger.getIp(), pPassenger);
+	}
 }

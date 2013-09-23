@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.swing.DefaultComboBoxModel;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -31,6 +32,7 @@ public class LoginController implements ActionListener{
 	LoginData loginData;
 	LoginPanel loginView;
 	boolean hasConnection = false;
+//	private JDialog dlg;
 	
 	public LoginController(ServerData pServerData, ServerFrame pServerFrame){
 		loginView = new LoginPanel();
@@ -39,6 +41,15 @@ public class LoginController implements ActionListener{
 		serverFrame = pServerFrame;
 		loginData = pServerData.getLoginData();
 		serverData = pServerData;
+		
+// 		dlg = new JDialog(serverFrame, "Getting Server Information...", true);
+// 		JProgressBar dpb = new JProgressBar(0, 500);
+// 		dlg.add(BorderLayout.NORTH, new JLabel("Progress..."));
+// 		dlg.add(BorderLayout.CENTER, dpb);
+// 		dlg.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+// 		dlg.setSize(300, 75);
+// 		dlg.setLocationRelativeTo(serverFrame);	
+// 		dlg.setVisible(true);
 	}
 	
 	public void operate(){
@@ -46,7 +57,7 @@ public class LoginController implements ActionListener{
 		serverFrame.invalidate();
 		serverFrame.validate();
 		saveDBCompanyList();
-
+//		dlg.setVisible(false);
 		if(hasConnection){
 			loginView.getCompanyListBox().setModel(new DefaultComboBoxModel(loginData.getCompanyNames()));		
 			loginView.getCompanyListBox().setSelectedItem(0);				
@@ -58,7 +69,7 @@ public class LoginController implements ActionListener{
 	  List<String> companyNameList = new ArrayList<String>();
 	  
 		try {
-			inputStream = new URL("http://testphone.freetzi.com/thesis/dbmanager.php?fname=getCompanies").openStream();
+			inputStream = new URL(serverData.getMappingData().getConnectionData().getDBUrl()+"/thesis/dbmanager.php?fname=getCompanies").openStream();
       BufferedReader rd = new BufferedReader(new InputStreamReader(inputStream, Charset.forName("UTF-8")));
       JSONArray companies = new JSONArray(readAll(rd));
       hasConnection = true;
@@ -82,7 +93,9 @@ public class LoginController implements ActionListener{
 	  	
 			loginData.setCompanyNames(companyNameList.toArray(new String[companyNameList.size()]));
 			loginData.setCompanyList(companyList);
+			
 		} catch (IOException e) {
+			System.out.println("io exception: "+e.getMessage());
 			serverFrame.setContentPane(new NoConnectionView(serverFrame, serverData).getErrorPanel());
 			serverFrame.invalidate();
 			serverFrame.validate();
@@ -111,6 +124,7 @@ public class LoginController implements ActionListener{
 			for(HashMap<String, String> map: loginData.getCompanyList()) {
 				if(map.get("name").equals(companyName)){
 					if(map.get("password").equals(password)){
+						loginData.setSelectedCompany(loginData.getCompanyID(String.valueOf(loginView.getCompanyListBox().getSelectedItem())));
 		      	new MappingController(serverData, serverFrame).operate();
 					}else{
 						loginView.getMessagePanel().setVisible(true);

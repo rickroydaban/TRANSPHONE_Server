@@ -30,11 +30,13 @@ public class MapPanel {
 	private JButton zoomInButton;
 	private JButton zoomOutButton;
 	private JPanel mainPanel, powerButtonPanel, webBrowserPanel;
+	private JPanel dataPanel;
+	private JPanel zoomButtonPanel;
 
 	public MapPanel(){
   	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize(); //manage to get size of the host computer
   	screenWidth	 = screenSize.getWidth()-35; //needed in resizing the preferred width of our embedded website
-  	screenHeight = screenSize.getHeight()-140; //needed in resizing the preferred height of you embedded website
+  	screenHeight = screenSize.getHeight()-150; //needed in resizing the preferred height of you embedded website
 	    
     mainPanel = new JPanel(new BorderLayout());
     /**/webBrowserPanel = new JPanel(new BorderLayout());
@@ -55,7 +57,8 @@ public class MapPanel {
     /**//**//**/buttonOff=new JButton("Turn Off");
 								buttonOff.setVisible(false); 
 
-    /**//**/JPanel dataPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
+    /**//**/dataPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
+    				dataPanel.setVisible(false);
     /**//**//**/JLabel statusLabel=new JLabel("Status: ");
     						statusLabel.setPreferredSize(new Dimension(70,30));
     						statusLabel.setHorizontalAlignment(JLabel.RIGHT);
@@ -98,7 +101,8 @@ public class MapPanel {
     				manageButton.setPreferredSize(new Dimension(60,33));
     				manageButton.setBorder(BorderFactory.createEmptyBorder());
     						
-    /**//**/JPanel zoomButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
+    /**//**/zoomButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
+    				zoomButtonPanel.setVisible(false);
     				zoomButtonPanel.setBackground(Color.WHITE);
     				zoomButtonPanel.setBorder(BorderFactory.createLineBorder(Color.decode("#BBBBBB")));
 
@@ -165,6 +169,10 @@ public class MapPanel {
 		return zoomOutButton;
 	}
 	
+	public JButton getManageButton(){
+		return manageButton;
+	}
+	
 	public JPanel getMapView(){
 		return mainPanel;
 	}
@@ -175,5 +183,13 @@ public class MapPanel {
 	
 	public JPanel getWebBrowserPanel(){
 		return webBrowserPanel;
+	}	
+	
+	public JPanel getDataPanel(){
+		return dataPanel;
+	}
+	
+	public JPanel getZoomButtonPanel(){
+		return zoomButtonPanel;
 	}
 }
