@@ -14,6 +14,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
+import connections.MyConnection;
+
 import chrriis.dj.nativeswing.swtimpl.components.JWebBrowser;
 
 public class MapPanel {
@@ -34,6 +36,7 @@ public class MapPanel {
 	private JPanel zoomButtonPanel;
 
 	public MapPanel(){
+		MyConnection conn = new MyConnection();
   	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize(); //manage to get size of the host computer
   	screenWidth	 = screenSize.getWidth()-35; //needed in resizing the preferred width of our embedded website
   	screenHeight = screenSize.getHeight()-150; //needed in resizing the preferred height of you embedded website
@@ -43,9 +46,9 @@ public class MapPanel {
     		webBrowserPanel.setBorder(BorderFactory.createTitledBorder("Server")); //creates a beveled border
     		webBrowserPanel.setVisible(false);
     		/**/webBrowser = new JWebBrowser(); //instantiates a new Java Web Browser
-        		webBrowser.navigate("http://localhost/thesis/multiplemarkers.php"); //defines what site to be viewed on the java web browser
+        		webBrowser.navigate(conn.getDBUrl()+"/thesis/multiplemarkers.php"); //defines what site to be viewed on the java web browser
         		webBrowser.setBarsVisible(false); //hides urls and other native browser elements
-    
+        		
     /**/JPanel controlPanel = new JPanel(new BorderLayout());
     /**//**/powerButtonPanel = new JPanel(new BorderLayout());
 						powerButtonPanel.setPreferredSize(new Dimension(95,30));

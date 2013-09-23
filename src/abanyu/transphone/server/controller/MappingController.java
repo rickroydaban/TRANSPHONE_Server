@@ -25,6 +25,7 @@ public class MappingController implements ActionListener{
 	private MapPanel mapView;
 	private MappingData mappingData;
 	private String[] taxiArray;
+	private int zoomLevel = 14;
 	private JDialog dlg;
 	
 	public MappingController(ServerData pServerData, ServerFrame pServerFrame){
@@ -57,7 +58,14 @@ public class MappingController implements ActionListener{
  			}
  		});
 				
-		serverFrame.invalidate();
+ 		mapView.getWebBrowser().registerFunction(new WebBrowserFunction("getZoomLevel") {
+ 			@Override
+ 			public Object invoke(JWebBrowser webBrowser, Object... arg1) {
+ 				return zoomLevel;
+ 			}
+ 		});
+
+ 		serverFrame.invalidate();
 		serverFrame.validate();				
 	}
 	
@@ -110,10 +118,13 @@ public class MappingController implements ActionListener{
 			mappingData.getTaxiList().clear();
 			mapView.getTaxiCounterField().setText(String.valueOf(0));			
 		}else	if(e.getSource() == mapView.getZoomInButton()){
-//			mapView.getWebBrowser().
-			mapView.getWebBrowser().navigate("http://localhost/thesis/multiplemarkers.php?fname=zoomIn");			
+//			mapView.getWebBrowser().navigate(mappingData.getConnectionData().getDBUrl()+"/thesis/multiplemarkers.php?fname=zoomIn");			
+			if(zoomLevel<18)	
+				zoomLevel++;
 		}else	if(e.getSource() == mapView.getZoomOutButton()){
-			mapView.getWebBrowser().navigate("http://localhost/thesis/multiplemarkers.php?fname=zoomOut");
+//			mapView.getWebBrowser().navigate(mappingData.getConnectionData().getDBUrl()+"/thesis/multiplemarkers.php?fname=zoomOut");
+			if(zoomLevel>9)	
+				zoomLevel--;
 		}else if(e.getSource() == mapView.getManageButton()){
 			 SwingUtilities.invokeLater(new Runnable() {
          @Override
