@@ -95,6 +95,7 @@ class OnClientConnectManager implements Runnable {
               	//handles system whenever something happens on the taxi while performing the passenger request              
                 if(oldTaxiInfos.getStatus()==TaxiStatus.requested || oldTaxiInfos.getStatus()==TaxiStatus.occupied){
                   if(myPassenger != null){	
+                  	System.out.println("cancel request");
                     notifyClients(newTaxiInfos,myPassenger,"cancelRequest");
                   }else{
                   	System.out.println("No Passenger is registered in the passenger list with such IP");
@@ -145,7 +146,8 @@ class OnClientConnectManager implements Runnable {
           myTaxiList = new ArrayList<String>();
           for(String curKey:keys){
       			 MyTaxi curTaxi = mappingData.getTaxiList().get(curKey);
-      			 myTaxiList.add(curTaxi.getPlateNumber()+";"+curTaxi.getStatus()+";"+curTaxi.getCurLat()+";"+curTaxi.getCurLng());
+      			 System.out.println("Updating markers with status of "+convertToString(curTaxi.getStatus()));
+      			 myTaxiList.add(curTaxi.getPlateNumber()+";"+curTaxi.getStatus()+";"+curTaxi.getCurLat()+";"+curTaxi.getCurLng()+";"+convertToString(curTaxi.getStatus()));
            }
            
           mappingView.getTaxiCounterField().setText(String.valueOf(myTaxiList.size()));
@@ -197,7 +199,8 @@ class OnClientConnectManager implements Runnable {
 		    System.out.println("connect to passenger socket: "+passenger.getIp()+" at port: "+mappingData.getConnectionData().getPassengerPort());
 	    	passengerSocket = new Socket(passenger.getIp(), mappingData.getConnectionData().getPassengerPort());
 	    	passengerOutputStream = new ObjectOutputStream(passengerSocket.getOutputStream());
-	    	if(nearestTaxi.getStatus()!=TaxiStatus.unavailable || nearestTaxi.getStatus()!=TaxiStatus.disconnected){
+    	if(!action.equals("cancelRequest")){
+//	    	if(nearestTaxi.getStatus()!=TaxiStatus.unavailable || nearestTaxi.getStatus()!=TaxiStatus.disconnected){
 	    		if(nearestTaxi.getStatus()==TaxiStatus.vacant)
 	    			nearestTaxi.setStatus(TaxiStatus.requested);
 		    
@@ -264,6 +267,19 @@ class OnClientConnectManager implements Runnable {
 //    return nearestTaxi;
 //  }
     
+  private String convertToString(TaxiStatus t){
+  	if(t == TaxiStatus.occupied)
+  		return "occupied";
+  	else if(t == TaxiStatus.requested)
+  		return "requested";
+  	else if(t == TaxiStatus.unavailable)
+  		return "unavailable";
+  	else if(t == TaxiStatus.disconnected)
+  		return "disconnected";
+  	
+  	return "vacant";
+  }
+  
   private double distance(double lat1, double lon1, double lat2, double lon2) {
 	double theta = lon1 - lon2;
 		double dist = Math.sin(deg2rad(lat1)) * Math.sin(deg2rad(lat2)) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.cos(deg2rad(theta));
