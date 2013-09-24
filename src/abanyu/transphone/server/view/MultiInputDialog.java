@@ -138,7 +138,7 @@ public class MultiInputDialog{
   public void displayRemoveTaxiGUI(){
   	int action = JOptionPane.showConfirmDialog(frame,
         																			 getRemoveTaxiPanel(),
-        																			 "Change Description",
+        																			 "Remove Taxi",
         																			 JOptionPane.OK_CANCEL_OPTION,
         																			 JOptionPane.PLAIN_MESSAGE);
   	
