@@ -16,7 +16,7 @@ import actors.MyPassenger;
 import actors.MyTaxi;
 import data.TaxiStatus;
 
-class OnClientConnectManager implements Runnable {		
+class OnClientConnectManagerOld implements Runnable {		
     private Socket clientSocket;
     private MappingData mappingData;
     private MapPanel mappingView;
@@ -28,7 +28,11 @@ class OnClientConnectManager implements Runnable {
     private Socket passengerSocket, taxiSocket;
     private ObjectOutputStream passengerOutputStream, taxiOutputStream;
 		private Object inputObject;
-    public OnClientConnectManager(Socket pClientSocket, MappingData pMappingData, MapPanel pMappingView, MappingController pMappingController) {
+		private String receiver = "taxi";
+		private String sendingFailed,sendingParameter;
+		private MyTaxi sendingTaxi;
+		private MyPassenger sendingPassenger;
+    public OnClientConnectManagerOld(Socket pClientSocket, MappingData pMappingData, MapPanel pMappingView, MappingController pMappingController) {
       clientSocket = pClientSocket;
       mappingData = pMappingData;
       mappingView = pMappingView;
@@ -62,16 +66,18 @@ class OnClientConnectManager implements Runnable {
             mappingData.addPassenger((MyPassenger)inputObject);
             System.out.println("Found nearest vacant taxi with Plate No: "+myPassenger.getRequestedTaxi());
           	
+            sendingFailed = "updateTaxi";
+          	sendingTaxi=nearestTaxi;
+          	sendingPassenger=myPassenger;
           	updateTaxi(nearestTaxi, myPassenger);
-      		}
-//      		else{
-//      			if(mappingData.getTaxiList().containsKey(nearestTaxi.getPlateNumber())){
-//      				System.out.println("The requested taxi seems to be vacant in the db but is not vacant in the server");
-//      			}else{
-//      				System.out.println("Error. The requested taxi is not listed in the server anymore");
-//      			}
-//      			sendCancelRequest(nearestTaxi,myPassenger,"pCancel"); //passenger cancelled his request
-//      		}          
+      		}else{
+      			if(mappingData.getTaxiList().containsKey(nearestTaxi.getPlateNumber())){
+      				System.out.println("The requested taxi seems to be vacant in the db but is not vacant in the server");
+      			}else{
+      				System.out.println("Error. The requested taxi is not listed in the server anymore");
+      			}
+      			sendCancelRequest(nearestTaxi,myPassenger,"pCancel"); //passenger cancelled his request
+      		}          
         }else if(inputObject instanceof MyTaxi){
           //links to the object data sent by the client(taxi) connection
           MyTaxi newTaxiInfos = (MyTaxi) inputObject;
@@ -92,46 +98,61 @@ class OnClientConnectManager implements Runnable {
           	
             if(newTaxiInfos.getStatus()!=TaxiStatus.disconnected){ //is only true when the unit is already in the base          		
           		if(newTaxiInfos.getStatus()==TaxiStatus.unavailable){ //if there is a pending passenger request, then the server must skip on searching for this unit
+              	newTaxiInfos.setPassengerIp(null);
               	mappingData.getTaxiList().put(newTaxiInfos.getPlateNumber(), newTaxiInfos);
               	
           			//handles system whenever something happens on the taxi while performing the passenger request              
-//                if(oldTaxiInfos.getStatus()==TaxiStatus.requested || oldTaxiInfos.getStatus()==TaxiStatus.occupied){
-//                  if(myPassenger != null){	
-//                  	System.out.println("cancel request");
-//                    sendCancelRequest(newTaxiInfos,myPassenger,"tCancel"); //the taxi driver cancelled his assignment
-//                  }else{
-//                  	System.out.println("No Passenger is registered in the passenger list with such IP");
-//                  }
-//                }
-//                else{
-//                	if(oldTaxiInfos.getStatus()!=TaxiStatus.unavailable){
-//                  	if(myPassenger!=null)
-//                  		sendCancelRequest(newTaxiInfos,myPassenger,"tReject"); //the taxi driver rejected the request               	                		
-//                	}
-//                }
+                if(oldTaxiInfos.getStatus()==TaxiStatus.requested || oldTaxiInfos.getStatus()==TaxiStatus.occupied){
+                  if(myPassenger != null){	
+                  	System.out.println("cancel request");
+                  	sendingFailed = "sendCancelRequest";
+                  	sendingParameter = "tCancel";
+                  	sendingTaxi=newTaxiInfos;
+                  	sendingPassenger=myPassenger;
+                    sendCancelRequest(newTaxiInfos,myPassenger,"tCancel"); //the taxi driver cancelled his assignment
+                  }else{
+                  	System.out.println("No Passenger is registered in the passenger list with such IP");
+                  }
+                }else{
+                	if(oldTaxiInfos.getStatus()!=TaxiStatus.unavailable){
+                  	if(myPassenger!=null)
+                    	sendingFailed = "sendCancelRequest";
+                  		sendingParameter = "tReject";
+                    	sendingTaxi=newTaxiInfos;
+                    	sendingPassenger=myPassenger;
+                  		sendCancelRequest(newTaxiInfos,myPassenger,"tReject"); //the taxi driver rejected the request               	                		
+                	}
+                }
           		}else if(newTaxiInfos.getStatus()==TaxiStatus.vacant){ //if there is a pending passenger request, then the server must skip on searching for this unit
+              	newTaxiInfos.setPassengerIp(null);
               	mappingData.getTaxiList().put(newTaxiInfos.getPlateNumber(), newTaxiInfos);
               	
           			//handles system whenever something happens on the taxi while performing the passenger request              
                 if(oldTaxiInfos.getStatus()==TaxiStatus.occupied){
                   if(myPassenger != null){	
                   	System.out.println("cancel request");
-                    sendCancelRequest(newTaxiInfos,myPassenger,"tFinished"); //the taxi driver cancelled his assignment
+                  	sendingFailed = "sendCancelRequest";
+                  	sendingParameter = "tCancel";
+                  	sendingTaxi=newTaxiInfos;
+                  	sendingPassenger=myPassenger;
+                    sendCancelRequest(newTaxiInfos,myPassenger,"tCancel"); //the taxi driver cancelled his assignment
                   }else{
                   	System.out.println("No Passenger is registered in the passenger list with such IP");
                   }
-                }
-//                else{
+                }else{
 //                	if(oldTaxiInfos.getStatus()!=TaxiStatus.vacant){
-//                  	if(myPassenger!=null)
-//                    	sendingFailed = "sendCancelRequest";
-//                  		sendingParameter = "tReject";
-//                    	sendingTaxi=newTaxiInfos;
-//                    	sendingPassenger=myPassenger;
-//                  		sendCancelRequest(newTaxiInfos,myPassenger,"tReject"); //the taxi driver rejected the request               	                		
-//                	}
+                  	if(myPassenger!=null)
+                    	sendingFailed = "sendCancelRequest";
+                  		sendingParameter = "tReject";
+                    	sendingTaxi=newTaxiInfos;
+                    	sendingPassenger=myPassenger;
+                  		sendCancelRequest(newTaxiInfos,myPassenger,"tReject"); //the taxi driver rejected the request               	                		
+                	}
 //                }
           		}else{
+              	sendingFailed = "updatePassenger";
+              	sendingTaxi=newTaxiInfos;
+              	sendingPassenger=myPassenger;
           			updatePassenger(newTaxiInfos, myPassenger);
           		}
           		
@@ -142,6 +163,10 @@ class OnClientConnectManager implements Runnable {
               try {
         				System.out.println("Request Taxi Disconnect!");
                 if(myPassenger != null){	
+                	sendingFailed = "sendCancelRequest";
+                  sendingParameter = "tCancel";
+                	sendingTaxi=newTaxiInfos;
+                	sendingPassenger=myPassenger;
                 	sendCancelRequest(newTaxiInfos, myPassenger, "tCancel");
                 }else{
                 	System.out.println("Sending disconnection acceptance to the requesting taxi");
@@ -186,7 +211,7 @@ class OnClientConnectManager implements Runnable {
         }else{
         	if(inputObject instanceof String){
         		String receivedString = (String)inputObject;
-        		System.out.println("Received String: "+receivedString);;
+        		
         		if(receivedString.contains("clientDisconnect")){
         			String clientIP = receivedString.split(":")[1];
 
@@ -199,16 +224,8 @@ class OnClientConnectManager implements Runnable {
       				clientOutputStream.flush();
         		}else if(receivedString.contains("taxiReject")){
         			String plateNo = receivedString.split(":")[1];
-        			System.out.print("Taxi "+plateNo+" has rejected the request");
         			MyTaxi taxi = mappingData.getTaxiList().get(plateNo);
-        			System.out.println(" to passenger: "+taxi.getPassengerIP());
         			sendCancelRequest(taxi, mappingData.getPassengerList().get(taxi.getPassengerIP()), "tReject");
-        		}else if(receivedString.contains("taxiCancel")){
-        			String plateNo = receivedString.split(":")[1];
-        			System.out.print("Taxi "+plateNo+" has cancel the request");
-        			MyTaxi taxi = mappingData.getTaxiList().get(plateNo);
-        			System.out.println(" to passenger: "+taxi.getPassengerIP());
-        			sendCancelRequest(taxi, mappingData.getPassengerList().get(taxi.getPassengerIP()), "tCancel");
         		}
         	}
         }
@@ -227,10 +244,23 @@ class OnClientConnectManager implements Runnable {
 					clientOutputStream.writeObject("resend");
 					clientOutputStream.flush();
 					socket.close();						
-				}	
-	  	} catch (IOException e1) {
-	  		System.out.println("io exception: "+e1.getMessage()+" tps: "+mappingData.getConnectionData().getTaxiPort()+" tpu: "+mappingData.getTaxi().getIP());
-	  	}
+				}else{
+					if(receiver.equals("taxi")){
+						if(sendingFailed.equals("sendCancelRequest")){
+							sendCancelRequest(sendingTaxi, sendingPassenger, sendingParameter);
+						}else if(sendingFailed.equals("updatePassenger")){
+							updatePassenger(sendingTaxi, sendingPassenger);
+						}
+					}else if(receiver.equals("passenger")){
+						if(sendingFailed.equals("updateTaxi")){
+							updateTaxi(sendingTaxi, sendingPassenger);
+						}						
+					}		
+				}
+				
+			  } catch (IOException e1) {
+			  	System.out.println("io exception: "+e1.getMessage()+" tps: "+mappingData.getConnectionData().getTaxiPort()+" tpu: "+mappingData.getTaxi().getIP());
+			  }
 	  } catch (ClassNotFoundException e) {
       	e.printStackTrace();
 	  } catch(Exception e){
@@ -281,7 +311,6 @@ class OnClientConnectManager implements Runnable {
 				taxiOutputStream = new ObjectOutputStream(taxiSocket.getOutputStream());
 	    	taxiOutputStream.writeObject(action);
 	    	taxiOutputStream.flush();
-	    	System.out.println("Successfully executed action "+action+" to the passenger");
 	    	taxiOutputStream.close();
 	    	taxiSocket.close();
       }else{
@@ -289,18 +318,13 @@ class OnClientConnectManager implements Runnable {
   		
 	    	passengerSocket = new Socket(passenger.getIp(), mappingData.getConnectionData().getPassengerPort());
 	    	passengerOutputStream = new ObjectOutputStream(passengerSocket.getOutputStream());
-	    	System.out.println("Cancellation Type: "+action);
 	  		passengerOutputStream.writeObject(action); //send taxi cancel to the passenger
 	    	passengerOutputStream.flush();
-	    	System.out.println("Successfully executed action "+action+" to the passenger");
 	    	passengerOutputStream.close();
 	    	passengerSocket.close();
+	  		passenger = null;
+	  		taxi.setPassengerIp(null);
       }  	
-      
-  		passenger = null;
-			mappingData.getPassengerList().remove(taxi.getPassengerIP());
-  		taxi.setPassengerIp(null);
-
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
