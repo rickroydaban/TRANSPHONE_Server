@@ -33,8 +33,8 @@ public class MultiInputDialog{
 	private DialogPassword passwordField;
 	private DialogField licenseField;
 	private DialogField nameField;
-	private JComboBox taxiList;
-	private JComboBox driverList;
+	private DialogCombo taxiList;
+	private DialogCombo driverList;
 
 	public MultiInputDialog(ServerFrame pFrame, ServerData data){
 		frame = pFrame;
@@ -153,7 +153,7 @@ public class MultiInputDialog{
   public void displayRemoveDriverGUI(){
   	int action = JOptionPane.showConfirmDialog(frame,
         																			 getRemoveDriverPanel(),
-        																			 "Change Description",
+        																			 "Remove Driver",
         																			 JOptionPane.OK_CANCEL_OPTION,
         																			 JOptionPane.PLAIN_MESSAGE);
   	
@@ -169,41 +169,49 @@ public class MultiInputDialog{
   	JPanel removeTaxiPanel = new JPanel();
 		removeTaxiPanel.setLayout(new BoxLayout(removeTaxiPanel, BoxLayout.Y_AXIS));
   	
-  	JPanel newBodyPanel = new JPanel();
-  	DialogLabel newDescriptionLabel = new DialogLabel("Description: ");
-  	newDescriptionField = new DialogField();
-  	newBodyPanel.add(newDescriptionLabel);
-  	newBodyPanel.add(newDescriptionField);
-
-  	removeTaxiPanel.add(newBodyPanel);
+		JPanel taxiPanel = new JPanel();
+		DialogLabel taxiLabel = new DialogLabel("Plate No: ");
+		taxiList = new DialogCombo(lData.getPlateNumbers());
+		taxiList.setSelectedItem(0);				
+		taxiPanel.add(taxiLabel);
+		taxiPanel.add(taxiList);
+  	removeTaxiPanel.add(taxiPanel);
   	return removeTaxiPanel;  	
   } 
   
   private JPanel getRemoveDriverPanel(){
-  	JPanel changeDescriptionPanel = new JPanel();
-		changeDescriptionPanel.setLayout(new BoxLayout(changeDescriptionPanel, BoxLayout.Y_AXIS));
+  	JPanel removeDriverPanel = new JPanel();
+		removeDriverPanel.setLayout(new BoxLayout(removeDriverPanel, BoxLayout.Y_AXIS));
   	
-  	JPanel newBodyPanel = new JPanel();
-  	DialogLabel newDescriptionLabel = new DialogLabel("Description: ");
-  	newDescriptionField = new DialogField();
-  	newBodyPanel.add(newDescriptionLabel);
-  	newBodyPanel.add(newDescriptionField);
-
-  	changeDescriptionPanel.add(newBodyPanel);
-  	return changeDescriptionPanel;  	
+		JPanel driverPanel = new JPanel();
+		DialogLabel driverLabel = new DialogLabel("Driver: ");
+		driverList = new DialogCombo(lData.getDriverNames());
+		driverList.setSelectedItem(0);				
+		driverPanel.add(driverLabel);
+		driverPanel.add(driverList);		
+  	removeDriverPanel.add(driverPanel);
+  	return removeDriverPanel;  	
   } 
   
   private JPanel getChangeDescriptionPanel(){
   	JPanel changeDescriptionPanel = new JPanel();
 		changeDescriptionPanel.setLayout(new BoxLayout(changeDescriptionPanel, BoxLayout.Y_AXIS));
   	
-  	JPanel newBodyPanel = new JPanel();
+		JPanel taxiPanel = new JPanel();
+		DialogLabel taxiLabel = new DialogLabel("Plate No: ");
+		taxiList = new DialogCombo(lData.getPlateNumbers());
+		taxiList.setSelectedItem(0);				
+		taxiPanel.add(taxiLabel);
+		taxiPanel.add(taxiList);
+		
+  	JPanel descriptionPanel = new JPanel();
   	DialogLabel newDescriptionLabel = new DialogLabel("Description: ");
   	newDescriptionField = new DialogField();
-  	newBodyPanel.add(newDescriptionLabel);
-  	newBodyPanel.add(newDescriptionField);
+  	descriptionPanel.add(newDescriptionLabel);
+  	descriptionPanel.add(newDescriptionField);
 
-  	changeDescriptionPanel.add(newBodyPanel);
+  	changeDescriptionPanel.add(taxiPanel);
+  	changeDescriptionPanel.add(descriptionPanel);
   	return changeDescriptionPanel;  	
   } 
   
@@ -211,12 +219,20 @@ public class MultiInputDialog{
   	JPanel changeBodyPanel = new JPanel();
 		changeBodyPanel.setLayout(new BoxLayout(changeBodyPanel, BoxLayout.Y_AXIS));
   	
-  	JPanel newBodyPanel = new JPanel();
+		JPanel taxiPanel = new JPanel();
+		DialogLabel taxiLabel = new DialogLabel("Plate No: ");
+		taxiList = new DialogCombo(lData.getPlateNumbers());
+		taxiList.setSelectedItem(0);				
+		taxiPanel.add(taxiLabel);
+		taxiPanel.add(taxiList);
+
+		JPanel newBodyPanel = new JPanel();
   	DialogLabel newBodyLabel = new DialogLabel("Body No: ");
   	newBodyField = new DialogField();
   	newBodyPanel.add(newBodyLabel);
   	newBodyPanel.add(newBodyField);
 
+  	changeBodyPanel.add(taxiPanel);
   	changeBodyPanel.add(newBodyPanel);
   	return changeBodyPanel;  	
   } 

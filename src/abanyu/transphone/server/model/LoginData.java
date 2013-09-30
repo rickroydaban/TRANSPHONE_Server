@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class LoginData {
-	private String [] companyNames;
-	private ArrayList<HashMap<String, String>> companyList;
+	private String [] companyNames, plateNumbers, driverNames;
+	private ArrayList<HashMap<String, String>> companyList, taxiList, driverList;
 	private int selectedCompany;
 	
 	public LoginData(){
@@ -44,4 +44,38 @@ public class LoginData {
   	
   	return -1;
   }
+  
+	public void setTaxiList(ArrayList<HashMap<String, String>> pTaxiList){
+		taxiList = pTaxiList;
+	}
+	
+	public void setPlateNumbers(String [] pPlateNumbers){
+		plateNumbers = pPlateNumbers;
+	}
+	
+	public String[] getPlateNumbers(){
+		return plateNumbers;
+	}
+	
+	public ArrayList<HashMap<String, String>> getTaxiList(){
+		return taxiList;
+	}
+	
+	public void setDriverList(ArrayList<HashMap<String, String>> pDriverList){
+		driverList = pDriverList;
+	}
+	
+	public void setDriverNames(String [] pDriverNames){
+		driverNames = pDriverNames;
+	}
+	
+	public String[] getDriverNames(){
+		return driverNames;
+	}
+	
+	public ArrayList<HashMap<String, String>> getDriverList(){
+		return driverList;
+	}
+
+
 }

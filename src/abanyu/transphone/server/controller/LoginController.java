@@ -14,8 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.DefaultComboBoxModel;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -54,14 +52,9 @@ public class LoginController implements ActionListener{
 	
 	public void operate(){
 		serverFrame.setContentPane(loginView.getLoginPanel());
+		saveDBCompanyList();
 		serverFrame.invalidate();
 		serverFrame.validate();
-		saveDBCompanyList();
-//		dlg.setVisible(false);
-		if(hasConnection){
-			loginView.getCompanyListBox().setModel(new DefaultComboBoxModel(loginData.getCompanyNames()));		
-			loginView.getCompanyListBox().setSelectedItem(0);				
-		}
 	}
 	
 	public void saveDBCompanyList(){
@@ -118,13 +111,12 @@ public class LoginController implements ActionListener{
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		if(e.getSource() == loginView.getLoginButton()){
-			String companyName = (String)loginView.getCompanyListBox().getSelectedItem();
+			String companyName = (String)loginView.getUsernameField().getText().toString();
 			String password = String.valueOf(loginView.getPasswordField().getPassword());
-		
 			for(HashMap<String, String> map: loginData.getCompanyList()) {
 				if(map.get("name").equals(companyName)){
 					if(map.get("password").equals(password)){
-						loginData.setSelectedCompany(loginData.getCompanyID(String.valueOf(loginView.getCompanyListBox().getSelectedItem())));
+						loginData.setSelectedCompany(loginData.getCompanyID(String.valueOf(companyName)));
 		      	new MappingController(serverData, serverFrame).operate();
 					}else{
 						loginView.getMessagePanel().setVisible(true);

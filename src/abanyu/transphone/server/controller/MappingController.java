@@ -4,17 +4,32 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.URL;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import abanyu.transphone.server.model.MappingData;
 import abanyu.transphone.server.model.ServerData;
 import abanyu.transphone.server.view.ActionMenu;
 import abanyu.transphone.server.view.MapPanel;
+import abanyu.transphone.server.view.NoConnectionView;
 import abanyu.transphone.server.view.ServerFrame;
 import chrriis.dj.nativeswing.swtimpl.components.JWebBrowser;
 import chrriis.dj.nativeswing.swtimpl.components.WebBrowserFunction;
@@ -64,6 +79,8 @@ public class MappingController implements ActionListener{
  				return zoomLevel;
  			}
  		});
+		saveDBDriverList();
+		saveDBTaxiList();
 
  		serverFrame.invalidate();
 		serverFrame.validate();				
@@ -138,4 +155,91 @@ public class MappingController implements ActionListener{
 	public JDialog getLoadingDialog(){
 		return dlg;
 	}
+	
+	public void saveDBTaxiList(){
+		InputStream inputStream = null;
+	  List<String> plateNoList = new ArrayList<String>();
+	  
+		try {
+			inputStream = new URL(serverData.getMappingData().getConnectionData().getDBUrl()+"/thesis/dbmanager.php?fname=getTaxiInfos&arg1="+serverData.getLoginData().getSelectedCompany()).openStream();
+      BufferedReader rd = new BufferedReader(new InputStreamReader(inputStream, Charset.forName("UTF-8")));
+      JSONArray companies = new JSONArray(readAll(rd));
+      
+      ArrayList<HashMap<String, String>> taxiList = new ArrayList<HashMap<String, String>>();
+	  	for (int i = 0; i < companies.length(); i++) {
+	  		Map<String, String> taxi = new HashMap<String, String>();
+	  		JSONObject jo = companies.getJSONObject(i);
+      
+	  		//RETRIEVE EACH JSON OBJECT'S FIELDS
+	  		taxi.put("plateNo", String.valueOf(jo.getString("plateNo")));
+	  		taxi.put("bodyNo", jo.getString("bodyNo"));
+	  		taxi.put("description", jo.getString("description"));
+      	  		
+				plateNoList.add(taxi.get("plateNo"));
+	  		taxiList.add((HashMap<String, String>) taxi);
+	  	}
+	  	
+	  	
+			serverData.getLoginData().setPlateNumbers(plateNoList.toArray(new String[plateNoList.size()]));
+			serverData.getLoginData().setTaxiList(taxiList);
+			
+		} catch (IOException e) {
+			System.out.println("io exception at saveDBTaxiList: "+e.getMessage());
+			serverFrame.setContentPane(new NoConnectionView(serverFrame, serverData).getErrorPanel());
+			serverFrame.invalidate();
+			serverFrame.validate();
+		} catch (JSONException e) {
+			System.out.println("json exception at saveDBTaxiList: "+e.getMessage());
+		}     
+
+	}
+	
+	public void saveDBDriverList(){
+		InputStream inputStream = null;
+	  List<String> driverNameList = new ArrayList<String>();
+	  
+		try {
+			inputStream = new URL(serverData.getMappingData().getConnectionData().getDBUrl()+"/thesis/dbmanager.php?fname=getDriverInfos&arg1="+serverData.getLoginData().getSelectedCompany()).openStream();
+      BufferedReader rd = new BufferedReader(new InputStreamReader(inputStream, Charset.forName("UTF-8")));
+      JSONArray companies = new JSONArray(readAll(rd));
+      
+      ArrayList<HashMap<String, String>> driverList = new ArrayList<HashMap<String, String>>();
+	  	for (int i = 0; i < companies.length(); i++) {
+	  		Map<String, String> driver = new HashMap<String, String>();
+	  		JSONObject jo = companies.getJSONObject(i);
+      
+	  		//RETRIEVE EACH JSON OBJECT'S FIELDS
+	  		driver.put("name", jo.getString("name"));
+	  		driver.put("license", jo.getString("license"));
+	  		driver.put("password", jo.getString("password"));
+      	  		
+				driverNameList.add(jo.getString("name"));
+				System.out.println(jo.getString("name"));
+	  		driverList.add((HashMap<String, String>) driver);
+	  	}
+	  	
+	  	
+	  	serverData.getLoginData().setDriverNames(driverNameList.toArray(new String[driverNameList.size()]));
+	  	serverData.getLoginData().setDriverList(driverList);
+			
+		} catch (IOException e) {
+			System.out.println("io exception at saveDBTaxiList: "+e.getMessage());
+			serverFrame.setContentPane(new NoConnectionView(serverFrame, serverData).getErrorPanel());
+			serverFrame.invalidate();
+			serverFrame.validate();
+		} catch (JSONException e) {
+			System.out.println("json exception at saveDBTaxiList: "+e.getMessage());
+		}     
+
+	}
+
+  private String readAll(Reader rd) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    int cp;
+    while ((cp = rd.read()) != -1) {
+      sb.append((char) cp);
+    }
+    return sb.toString();
+  }
+
 }

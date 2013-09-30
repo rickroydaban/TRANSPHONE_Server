@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagLayout;
+
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -12,9 +13,10 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
+import javax.swing.JTextField;
 
 public class LoginPanel{
-  private JComboBox companyListBox;
+  private JTextField usernameField;
 	private JPasswordField passwordField;
 	private JButton loginButton, clearButton;
 	private JPanel mainPanel, messagePanel;
@@ -31,16 +33,16 @@ public class LoginPanel{
 				BorderFactory.createEmptyBorder(20, 20, 20, 20)));
 
     /**//**/JPanel companyPanel = new JPanel();
-  	/**//**//**/JLabel companyLabel = new JLabel("Company");
+  	/**//**//**/JLabel companyLabel = new JLabel("Username");
   							companyLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
   							companyLabel.setFont(new Font("Calibri",Font.BOLD,16));
   							companyLabel.setForeground(Color.decode("#343434"));
   	
-  							companyListBox = new JComboBox();
-  							companyListBox.setFocusable(false);
-  							companyListBox.setPreferredSize(new Dimension(200, 35));
-  							companyListBox.setFont(new Font("Calibri",Font.PLAIN,15));
-  							companyListBox.setBorder(BorderFactory.createCompoundBorder( companyListBox.getBorder(), 
+  							usernameField = new JTextField();
+  							usernameField.setFocusable(true);
+  							usernameField.setPreferredSize(new Dimension(200, 35));
+  							usernameField.setFont(new Font("Calibri",Font.PLAIN,15));
+  							usernameField.setBorder(BorderFactory.createCompoundBorder( usernameField.getBorder(), 
   																	 																				 BorderFactory.createEmptyBorder(5, 5, 5, 5)));
   	  	
   	/**//**/JPanel passwordPanel = new JPanel();
@@ -78,7 +80,7 @@ public class LoginPanel{
     mainPanel.add(loginPanel);
     /**/loginPanel.add(companyPanel);
     /**//**/companyPanel.add(companyLabel);
-    /**//**/companyPanel.add(companyListBox);
+    /**//**/companyPanel.add(usernameField);
     /**/loginPanel.add(passwordPanel);
     /**//**/passwordPanel.add(passwordLabel);
     /**//**/passwordPanel.add(passwordField);
@@ -89,8 +91,8 @@ public class LoginPanel{
     /**//**/loginButtonPanel.add(clearButton);
 	}
 
-  public JComboBox getCompanyListBox(){
-  	return companyListBox;
+  public JTextField getUsernameField(){
+  	return usernameField;
   }
   
 	public JPasswordField getPasswordField(){
