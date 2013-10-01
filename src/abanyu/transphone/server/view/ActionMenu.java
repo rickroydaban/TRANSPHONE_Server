@@ -71,16 +71,16 @@ public class ActionMenu implements ActionListener{
   				
   				changePassPanel.add(changePassButton);
   				changeContactPanel.add(changeContactButton);
-  				changeDescPanel.add(changeDescButton);
-  				changeBodyNumPanel.add(changeBodyNumButton);
   				compPanel.add(changePassPanel);
   				compPanel.add(changeContactPanel);
-  				compPanel.add(changeBodyNumPanel);
-  				compPanel.add(changeDescPanel);
   				
   				addTaxiPanel.add(addTaxiButton);
+  				changeDescPanel.add(changeDescButton);
+  				changeBodyNumPanel.add(changeBodyNumButton);
   				removeTaxiPanel.add(removeTaxiButton);
   				taxiPanel.add(addTaxiPanel);
+  				taxiPanel.add(changeBodyNumPanel);
+  				taxiPanel.add(changeDescPanel);
   				taxiPanel.add(removeTaxiPanel);
   				
   				addDriverPanel.add(addDriverButton);
